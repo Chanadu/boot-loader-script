@@ -84,6 +84,13 @@ func main() {
 			"lts":     "EndeavourOS-LTS",
 		}
 
+		entryTypeToSortKeyAddition := map[string]int{
+			"arch":    1,
+			"windows": 2,
+			"lts":     3,
+		}
+		fallbackSortKeyAddition := 3
+
 		for _, line := range fileLines {
 			if strings.Contains(line, "title") {
 				fallbackText := ""
@@ -93,6 +100,30 @@ func main() {
 
 				fmt.Println(line)
 				fmt.Println("Replace with :", entryTypeToTitle[entryType]+fallbackText)
+			} else if strings.Contains(line, "sort-key") {
+				fmt.Println(line)
+				sortkeyNumber := entryTypeToSortKeyAddition[entryType]
+				if isFallback {
+					sortkeyNumber += fallbackSortKeyAddition
+				}
+				splitLine := strings.Split(line, " ")
+				newSplitLine := []string{}
+				for _, item := range splitLine {
+					if !(item == "" || item == " ") {
+						newSplitLine = append(newSplitLine, item)
+					}
+				}
+				splitLine = newSplitLine
+
+				if len(splitLine) != 2 {
+					log.Fatalf("Invalid sort-key line: %s", line)
+					os.Exit(1)
+				}
+				fmt.Printf("Replace with: %s %d-%s",
+					splitLine[0],
+					sortkeyNumber,
+					splitLine[1],
+				)
 			}
 		}
 	}
