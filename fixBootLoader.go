@@ -34,7 +34,7 @@ func getEntryType(fileName string) (entryType string, isFallback bool, err error
 	}
 	if entryType == "" {
 		err = fmt.Errorf("Unknown entry type")
-		return "", false, err
+		return entryType, false, err
 	}
 	return entryType, isFallback, nil
 }
@@ -55,8 +55,11 @@ func main() {
 	}
 
 	for _, file := range files {
-		fmt.Println(file.Name(), file.IsDir())
+		// fmt.Println(file.Name(), file.IsDir())
 		if file.IsDir() {
+			continue
+		}
+		if strings.Contains(strings.ToLower(file.Name()), "seed") {
 			continue
 		}
 
@@ -74,7 +77,7 @@ func main() {
 		fileLines := strings.Split(string(fileData), "\n")
 		entryType, isFallback, err := getEntryType(fileName)
 		if err != nil {
-			log.Fatalf("Unable to determine entry type: %s", err)
+			log.Fatalf("Unable to determine entry type of %s: %s", fileName, err)
 			os.Exit(1)
 		}
 
@@ -91,17 +94,19 @@ func main() {
 		}
 		fallbackSortKeyAddition := 3
 
-		for _, line := range fileLines {
+		for i, line := range fileLines {
+
 			if strings.Contains(line, "title") {
 				fallbackText := ""
 				if isFallback {
 					fallbackText = "-Fallback"
 				}
 
-				fmt.Println(line)
-				fmt.Println("Replace with :", entryTypeToTitle[entryType]+fallbackText)
+				// fmt.Println(line)
+				// fmt.Println("Replace with :", entryTypeToTitle[entryType]+fallbackText)
+				fileLines[i] = "title      " + entryTypeToTitle[entryType] + fallbackText
 			} else if strings.Contains(line, "sort-key") {
-				fmt.Println(line)
+				// fmt.Println(line)
 				sortkeyNumber := entryTypeToSortKeyAddition[entryType]
 				if isFallback {
 					sortkeyNumber += fallbackSortKeyAddition
@@ -119,13 +124,23 @@ func main() {
 					log.Fatalf("Invalid sort-key line: %s", line)
 					os.Exit(1)
 				}
-				fmt.Printf("Replace with: %s %d-%s",
-					splitLine[0],
-					sortkeyNumber,
-					splitLine[1],
-				)
+				// fmt.Printf("Replace with: %s %d-%s",
+				// 	splitLine[0],
+				// 	sortkeyNumber,
+				// 	splitLine[1],
+				// )
+				fileLines[i] = "sort-key   " + fmt.Sprintf("%d-%s", sortkeyNumber, splitLine[1])
 			}
 		}
+
+		output := strings.Join(fileLines, "\n")
+		err = os.WriteFile("/efi/loader/entries/"+fileName, []byte(output), 0644)
+		if err != nil {
+			log.Fatalf("Unable to write file: %s", err)
+			os.Exit(1)
+		}
+		fmt.Println()
+		fmt.Println("Finished Processing: ", fileName)
 	}
 
 }
